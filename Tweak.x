@@ -22,19 +22,95 @@ UIColor* getAverageColor(UIImage *image) {
     return color;
 }
 
+UIColor* getInvertColor(UIColor *color) {
+    CGColorRef oldCGColor = color.CGColor;
+    int numberOfComponents = CGColorGetNumberOfComponents(oldCGColor);
+    
+    // can not invert - the only component is the alpha
+    // e.g. color == [UIColor groupTableViewBackgroundColor]
+    if (numberOfComponents <= 1) {
+        return [UIColor colorWithCGColor:oldCGColor];
+    }
+    
+    const CGFloat *oldComponentColors = CGColorGetComponents(oldCGColor);
+    CGFloat newComponentColors[numberOfComponents];
+    int i = - 1;
+    while (++i < numberOfComponents - 1) {
+        newComponentColors[i] = 1 - oldComponentColors[i];
+    }
+    newComponentColors[i] = oldComponentColors[i]; // alpha
+    
+    CGColorRef newCGColor = CGColorCreate(CGColorGetColorSpace(oldCGColor), newComponentColors);
+    UIColor *newColor = [UIColor colorWithCGColor:newCGColor];
+    CGColorRelease(newCGColor);
+    
+    return newColor;
+}
 
-%group Colorize
+
+%hook SBMediaController
+
+-(void)setNowPlayingInfo:(id)arg1 {
+	%orig;
+	MRMediaRemoteGetNowPlayingInfo(dispatch_get_main_queue(), ^(CFDictionaryRef information) {
+		if (information && CFDictionaryContainsKey(information, kMRMediaRemoteNowPlayingInfoArtworkData)) {
+			SPColorArtworkImage = [UIImage imageWithData:(__bridge NSData*)CFDictionaryGetValue(information, kMRMediaRemoteNowPlayingInfoArtworkData)];
+		}
+	});
+}
+
+%end
 
 %hook MRUNowPlayingViewController
 
-+(void)init {
-	MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_get_main_queue());
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(NPColorUpdate) name:(__bridge NSString*)kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
-	%orig;
+-(BOOL)isOnScreen {
+	BOOL tempOrig = %orig;
+	if(tempOrig) {
+		[self NPColorize];
+	}
+	return tempOrig;
 }
 
 %new
--(void)NPColorUpdate {
+-(void)NPColorize {
+	if(self.layout !=0 && self.layout == 4) {
+		if([self.viewIfLoaded.superview.superview.superview.superview isKindOfClass:%c(PLPlatterView)]) {
+			//SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
+
+			RLog(@"ArtworkImage");
+
+			averageArtworkColor = getAverageColor(SPColorArtworkImage);
+
+			UIColor *invertColor = getInvertColor(averageArtworkColor);
+
+			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleLabel.textColor = invertColor;
+			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.subtitleLabel.textColor = invertColor;
+
+			CGRect replacementFrame = self.viewIfLoaded.superview.superview.superview.superview.subviews[0].frame;
+
+			CAShapeLayer *replacementLayer = [[CAShapeLayer alloc] init];
+
+			replacementLayer.frame = replacementFrame;
+			replacementLayer.cornerRadius = 13;
+			replacementLayer.masksToBounds = true;
+			replacementLayer.backgroundColor = [averageArtworkColor CGColor];
+
+			UIView *replacementView = [[UIView alloc] initWithFrame:replacementFrame];
+
+			[replacementView.layer insertSublayer:replacementLayer atIndex:0];
+			[[(CSNotificationAdjunctListViewController *)self.parentViewController.parentViewController.parentViewController stackView].arrangedSubviews[0].subviews[0] setBackgroundView:replacementView];
+		}
+
+	}
+}
+
+/*-(void)viewWillAppear:(BOOL)arg1 {
+	[self NPColorize];
+	%orig(arg1);
+}*/
+
+//%new
+//-(void)NPColorUpdate {
 	//NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
 	//if(tempArray != nil && [tempArray count] != 0) {
 		/*
@@ -53,19 +129,62 @@ UIColor* getAverageColor(UIImage *image) {
 			*/
 		//}
 
-	RLog(@"ArtworkImage");
-	SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
-}
+/*	if(self.layout !=0 && self.layout == 4) {
+		if([self.viewIfLoaded.superview.superview.superview.superview isKindOfClass:%c(PLPlatterView)]) {
+			RLog(@"ArtworkImage");
+			SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
+
+			averageArtworkColor = getAverageColor(SPColorArtworkImage);
+
+			CGRect replacementFrame = self.viewIfLoaded.superview.superview.superview.superview.subviews[0].frame;
+
+			CAShapeLayer *replacementLayer = [[CAShapeLayer alloc] init];
+
+			replacementLayer.frame = replacementFrame;
+			replacementLayer.cornerRadius = 13;
+			replacementLayer.masksToBounds = true;
+			replacementLayer.backgroundColor = [averageArtworkColor CGColor];
+
+			UIView *replacementView = [[UIView alloc] initWithFrame:replacementFrame];
+
+			[replacementView.layer insertSublayer:replacementLayer atIndex:0];
+			[[(CSNotificationAdjunctListViewController *)self.parentViewController.parentViewController.parentViewController stackView].arrangedSubviews[0].subviews[0] setBackgroundView:replacementView];
+		}
+
+	}
+
+}*/
+
+/*-(void)viewWillAppear:(BOOL)arg1 {
+	MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_get_main_queue());
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(NPColorUpdate) name:(__bridge NSString*)kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
+	return %orig(arg1);
+}*/
 
 %end
 
-%hook CSCombinedListViewController
+/*%hook CSNotificationAdjunctListViewController
 
--(void)_updateListViewContentInset {
-	//BOOL tempOrig = %orig;
-	[self NPColorUpdate];
-	NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
+-(BOOL)isShowingMediaControls {
+	NSArray *tempArray = [self stackView].arrangedSubviews;
 	if(tempArray != nil && [tempArray count] != 0) {
+	}
+	return %orig;
+}
+
+%end*/
+
+//%hook CSCombinedListViewController
+
+//-(void)viewWillAppear:(BOOL)arg1 {
+	//BOOL tempOrig = %orig;
+	/*if([self.adjunctListViewController.childViewControllers count] != 0) {
+		if([self.adjunctListViewController.childViewControllers[0].childViewControllers count] != 0) {
+			[self.adjunctListViewController.childViewControllers[0].childViewControllers[0].childViewControllers[0] NPColorUpdate];
+		}
+	}*/
+	/*NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
+	if(tempArray != nil && [tempArray count] != 0) {*/
 		/*
 		if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0] isKindOfClass:%c(CSAdjunctItemView)]) {
 			if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0] isKindOfClass:%c(PLPlatterView)]) {
@@ -80,7 +199,7 @@ UIColor* getAverageColor(UIImage *image) {
 				}
 			}
 			*/
-			RLog(@"Changed Color");
+			/*RLog(@"Changed Color");
 			averageArtworkColor = getAverageColor(SPColorArtworkImage);
 
 			CGRect replacementFrame = [[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[0].frame;
@@ -97,41 +216,10 @@ UIColor* getAverageColor(UIImage *image) {
 			[replacementView.layer insertSublayer:replacementLayer atIndex:0];
 			[[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0] setBackgroundView:replacementView];
 
-		}
+		}*/
 
 	//return tempOrig;
-	%orig;
-}
+	//return %orig;
+//}
 
-%end
-%end
-
-%ctor {
-	//NotifCenterChanged = NO;
-	if (![NSProcessInfo processInfo]) return;
-    NSString* processName = [NSProcessInfo processInfo].processName;
-    BOOL isSpringboard = [@"SpringBoard" isEqualToString:processName];
-
-    BOOL shouldLoad = NO;
-    NSArray* args = [[NSClassFromString(@"NSProcessInfo") processInfo] arguments];
-    NSUInteger count = args.count;
-    if (count != 0) {
-        NSString* executablePath = args[0];
-        if (executablePath) {
-            NSString* processName = [executablePath lastPathComponent];
-            BOOL isApplication = [executablePath rangeOfString:@"/Application/"].location != NSNotFound || [executablePath rangeOfString:@"/Applications/"].location != NSNotFound;
-            BOOL isFileProvider = [[processName lowercaseString] rangeOfString:@"fileprovider"].location != NSNotFound;
-            BOOL skip = [processName isEqualToString:@"AdSheet"]
-                        || [processName isEqualToString:@"CoreAuthUI"]
-                        || [processName isEqualToString:@"InCallService"]
-                        || [processName isEqualToString:@"MessagesNotificationViewService"]
-                        || [executablePath rangeOfString:@".appex/"].location != NSNotFound;
-            if ((!isFileProvider && isApplication && !skip) || isSpringboard) {
-                shouldLoad = YES;
-            }
-        }
-    }
-
-    if (!shouldLoad) return;
-    %init(Colorize);
-}
+//%end

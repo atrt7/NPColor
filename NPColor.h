@@ -3,11 +3,25 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <MediaRemote/MediaRemote.h>
+#import <SpringBoard/SBMediaController.h>
 #import <QuartzCore/CABackdropLayer.h>
 
-@class MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView;
+@class MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView, MRUNowPlayingLabelView, MRUNowPlayingRoutingButton, MPButton, MPRouteLabel;
 
 @protocol MTRecipeMaterialSettingsProviding
+@end
+
+@interface CCUICAPackageView : UIView
+@end
+
+@interface MPButton : UIButton
+@end
+
+@interface MPRouteLabel : UIView
+@end
+
+@interface MRUNowPlayingRoutingButton : MPButton
+@property (nonatomic,retain) CCUICAPackageView * packageView;
 @end
 
 @interface MTMaterialLayer : CABackdropLayer
@@ -16,11 +30,21 @@
 
 @interface MRUArtworkView : UIView
 @property (nonatomic,retain) UIImage * artworkImage;
+@property (nonatomic,retain) UIImageView * iconView;
 -(UIImage *)artworkImage;
+-(UIImage *)iconImage;
+-(id)initWithFrame:(CGRect)arg1;
+@end
+
+@interface MRUNowPlayingLabelView : UIView
+@property (nonatomic,retain) UILabel * titleLabel;
+@property (nonatomic,retain) UILabel * subtitleLabel;
 @end
 
 @interface MRUNowPlayingHeaderView : UIControl
+@property (nonatomic,retain) MRUNowPlayingLabelView * labelView;
 @property (nonatomic,readonly) MRUArtworkView * artworkView;
+@property (nonatomic,readonly) MRUNowPlayingRoutingButton * routingButton;
 -(MRUArtworkView *)artworkView;
 @end
 
@@ -34,6 +58,10 @@
 @end
 
 @interface MRUNowPlayingViewController : UIViewController
+@property (assign,nonatomic) long long layout;
+@property (nonatomic,readonly) MRUArtworkView * artworkView;
+-(void)NPColorize;
+-(void)viewWillAppear:(BOOL)arg1;
 -(void)loadView;
 -(void)viewDidLoad;
 -(BOOL)isOnScreen;
@@ -68,6 +96,7 @@
 
 @interface CSNotificationAdjunctListViewController : UIViewController <CSAdjunctListModelDelegate>
 @property (nonatomic,retain) UIStackView * stackView;
+-(BOOL)isShowingMediaControls;
 -(UIStackView *)stackView;
 @end
 
