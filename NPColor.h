@@ -7,7 +7,7 @@
 #import <SpringBoard/SBMediaController.h>
 #import <QuartzCore/CABackdropLayer.h>
 
-@class MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView, MRUNowPlayingLabelView, MRUNowPlayingRoutingButton, MPButton, MPRouteLabel;
+@class MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView, MRUNowPlayingLabelView, MRUNowPlayingRoutingButton, MPButton, MPRouteLabel, MPUMarqueeView, _MPUMarqueeContentView;
 
 @protocol MTRecipeMaterialSettingsProviding
 @end
@@ -43,10 +43,21 @@
 -(id)initWithFrame:(CGRect)arg1;
 @end
 
+@interface _MPUMarqueeContentView : UIView
++(Class)layerClass;
+-(void)_intrinsicContentSizeInvalidatedForChildView:(id)arg1 ;
+@end
+
+@interface MPUMarqueeView : UIView
+@property (nonatomic,readonly) UIView * contentView;
+@end
+
 @interface MRUNowPlayingLabelView : UIView
 @property (nonatomic,retain) UILabel * titleLabel;
 @property (nonatomic,retain) UILabel * subtitleLabel;
 @property (nonatomic,retain) MPRouteLabel * routeLabel;
+@property (nonatomic,retain) MPUMarqueeView * subtitleMarqueeView;
+@property (nonatomic,retain) MPUMarqueeView * titleMarqueeView;
 @end
 
 @interface MRUNowPlayingHeaderView : UIControl

@@ -87,9 +87,12 @@ UIColor* getInvertColor(UIColor *color) {
 		if([self.viewIfLoaded.superview.superview.superview.superview isKindOfClass:%c(PLPlatterView)]) {
 			//SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
 
+			if([((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleMarqueeView.contentView.layer isKindOfClass:%c(CAReplicatorLayer)]) {
+				RLog(@"TEXT");
+				((CAReplicatorLayer *) ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleMarqueeView.contentView.layer).instanceColor = [invertColor CGColor];
+				((CAReplicatorLayer *) ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.subtitleMarqueeView.contentView.layer).instanceColor = [invertColor CGColor];
+			}
 			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.iconShadowView.hidden = YES;
-			[((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleLabel setTextColor:invertColor];
-			[((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.subtitleLabel setTextColor:invertColor];
 			
 			CGRect replacementFrame = self.viewIfLoaded.superview.superview.superview.superview.subviews[0].frame;
 
