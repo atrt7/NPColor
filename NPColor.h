@@ -3,6 +3,7 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <MediaRemote/MediaRemote.h>
+//#import <MediaControls/MediaControls.h>
 #import <SpringBoard/SBMediaController.h>
 #import <QuartzCore/CABackdropLayer.h>
 
@@ -14,10 +15,14 @@
 @interface CCUICAPackageView : UIView
 @end
 
+@interface MRUShadowView : UIView
+@end
+
 @interface MPButton : UIButton
 @end
 
 @interface MPRouteLabel : UIView
+@property (nonatomic,readonly) UILabel * titleLabel;
 @end
 
 @interface MRUNowPlayingRoutingButton : MPButton
@@ -31,14 +36,17 @@
 @interface MRUArtworkView : UIView
 @property (nonatomic,retain) UIImage * artworkImage;
 @property (nonatomic,retain) UIImageView * iconView;
+@property (nonatomic,retain) MRUShadowView * iconShadowView;
 -(UIImage *)artworkImage;
 -(UIImage *)iconImage;
+-(void)setIconImage:(UIImage *)arg1;
 -(id)initWithFrame:(CGRect)arg1;
 @end
 
 @interface MRUNowPlayingLabelView : UIView
 @property (nonatomic,retain) UILabel * titleLabel;
 @property (nonatomic,retain) UILabel * subtitleLabel;
+@property (nonatomic,retain) MPRouteLabel * routeLabel;
 @end
 
 @interface MRUNowPlayingHeaderView : UIControl
@@ -106,8 +114,6 @@
 @property (getter=isShowingMediaControls,nonatomic,readonly) BOOL showingMediaControls;
 -(BOOL)hasContent;
 -(void)_updateListViewContentInset;
--(BOOL)isShowingMediaControls;
--(void)NPColorUpdate;
 @end
 
 @interface SBFTouchPassThroughView : UIView
@@ -123,6 +129,7 @@
 -(NSArray *)presentationRegions;
 -(id<UICoordinateSpace>)presentationCoordinateSpace;
 -(BOOL)isCoverSheetView;
+-(void)loadView;
 @end
 
 @interface CSMediaControlsView : CSCoverSheetViewBase

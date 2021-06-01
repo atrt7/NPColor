@@ -5,6 +5,7 @@
 //static BOOL enabled;
 static UIImage *SPColorArtworkImage;
 static UIColor *averageArtworkColor;
+static UIColor *invertColor;
 
 UIColor* getAverageColor(UIImage *image) {
     
@@ -23,28 +24,24 @@ UIColor* getAverageColor(UIImage *image) {
 }
 
 UIColor* getInvertColor(UIColor *color) {
-    CGColorRef oldCGColor = color.CGColor;
-    int numberOfComponents = CGColorGetNumberOfComponents(oldCGColor);
-    
-    // can not invert - the only component is the alpha
-    // e.g. color == [UIColor groupTableViewBackgroundColor]
-    if (numberOfComponents <= 1) {
-        return [UIColor colorWithCGColor:oldCGColor];
+    CGFloat alpha;
+
+    CGFloat red, green, blue;
+    if ([color getRed:&red green:&green blue:&blue alpha:&alpha]) {
+        return [UIColor colorWithRed:1.0 - red green:1.0 - green blue:1.0 - blue alpha:alpha];
     }
-    
-    const CGFloat *oldComponentColors = CGColorGetComponents(oldCGColor);
-    CGFloat newComponentColors[numberOfComponents];
-    int i = - 1;
-    while (++i < numberOfComponents - 1) {
-        newComponentColors[i] = 1 - oldComponentColors[i];
+
+    CGFloat hue, saturation, brightness;
+    if ([color getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha]) {
+        return [UIColor colorWithHue:1.0 - hue saturation:1.0 - saturation brightness:1.0 - brightness alpha:alpha];
     }
-    newComponentColors[i] = oldComponentColors[i]; // alpha
-    
-    CGColorRef newCGColor = CGColorCreate(CGColorGetColorSpace(oldCGColor), newComponentColors);
-    UIColor *newColor = [UIColor colorWithCGColor:newCGColor];
-    CGColorRelease(newCGColor);
-    
-    return newColor;
+
+    CGFloat white;
+    if ([color getWhite:&white alpha:&alpha]) {
+        return [UIColor colorWithWhite:1.0 - white alpha:alpha];
+    }
+
+    return nil;
 }
 
 
@@ -55,20 +52,33 @@ UIColor* getInvertColor(UIColor *color) {
 	MRMediaRemoteGetNowPlayingInfo(dispatch_get_main_queue(), ^(CFDictionaryRef information) {
 		if (information && CFDictionaryContainsKey(information, kMRMediaRemoteNowPlayingInfoArtworkData)) {
 			SPColorArtworkImage = [UIImage imageWithData:(__bridge NSData*)CFDictionaryGetValue(information, kMRMediaRemoteNowPlayingInfoArtworkData)];
+			averageArtworkColor = getAverageColor(SPColorArtworkImage);
+			invertColor = getInvertColor(averageArtworkColor);
 		}
 	});
 }
 
 %end
 
+%hook MRUArtworkView
+
+-(void)setIconImage:(UIImage *)arg1 {
+	UIImage *temp = [[UIImage alloc] init];
+	%orig(temp);
+}
+
+%end
+
+
 %hook MRUNowPlayingViewController
 
--(BOOL)isOnScreen {
-	BOOL tempOrig = %orig;
-	if(tempOrig) {
+-(void)viewWillAppear:(BOOL)arg1 {
+	//BOOL tempOrig = %orig;
+	//if(tempOrig) {
+		%orig(arg1);
 		[self NPColorize];
-	}
-	return tempOrig;
+	//}
+	//return tempOrig;
 }
 
 %new
@@ -77,15 +87,10 @@ UIColor* getInvertColor(UIColor *color) {
 		if([self.viewIfLoaded.superview.superview.superview.superview isKindOfClass:%c(PLPlatterView)]) {
 			//SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
 
-			RLog(@"ArtworkImage");
-
-			averageArtworkColor = getAverageColor(SPColorArtworkImage);
-
-			UIColor *invertColor = getInvertColor(averageArtworkColor);
-
-			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleLabel.textColor = invertColor;
-			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.subtitleLabel.textColor = invertColor;
-
+			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.iconShadowView.hidden = YES;
+			[((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleLabel setTextColor:invertColor];
+			[((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.subtitleLabel setTextColor:invertColor];
+			
 			CGRect replacementFrame = self.viewIfLoaded.superview.superview.superview.superview.subviews[0].frame;
 
 			CAShapeLayer *replacementLayer = [[CAShapeLayer alloc] init];
@@ -165,61 +170,85 @@ UIColor* getInvertColor(UIColor *color) {
 
 /*%hook CSNotificationAdjunctListViewController
 
--(BOOL)isShowingMediaControls {
+-(void)viewWillAppear:(BOOL)arg1 {
 	NSArray *tempArray = [self stackView].arrangedSubviews;
 	if(tempArray != nil && [tempArray count] != 0) {
+		if([[[self stackView].arrangedSubviews objectAtIndex:0] isKindOfClass:%c(CSAdjunctItemView)]) {
+			if([[[self stackView].arrangedSubviews objectAtIndex:0].subviews[0] isKindOfClass:%c(PLPlatterView)]) {
+				if([[[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1] isKindOfClass:%c(PLPlatterCustomContentView)]) {
+					if([[[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0] isKindOfClass:%c(CSMediaControlsView)]) {
+						if([[[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0] isKindOfClass:%c(UIView)]) {
+							if([[[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0] isKindOfClass:%c(MRUNowPlayingView)]) {
+								//averageArtworkColor = getAverageColor(SPColorArtworkImage);
+								//invertColor = getInvertColor(averageArtworkColor);
+								RLog(@"TEXT");
+								((MRUNowPlayingView *) [[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.labelView.titleLabel.textColor = invertColor;
+								((MRUNowPlayingView *) [[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.labelView.subtitleLabel.textColor = invertColor;
+								((MRUNowPlayingView *) [[self stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.labelView.routeLabel.titleLabel.textColor = invertColor;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
-	return %orig;
+	%orig(arg1);
 }
 
 %end*/
 
 //%hook CSCombinedListViewController
 
-//-(void)viewWillAppear:(BOOL)arg1 {
-	//BOOL tempOrig = %orig;
-	/*if([self.adjunctListViewController.childViewControllers count] != 0) {
-		if([self.adjunctListViewController.childViewControllers[0].childViewControllers count] != 0) {
-			[self.adjunctListViewController.childViewControllers[0].childViewControllers[0].childViewControllers[0] NPColorUpdate];
-		}
-	}*/
-	/*NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
-	if(tempArray != nil && [tempArray count] != 0) {*/
-		/*
+/*-(void)viewDidAppear:(BOOL)arg1 {
+	%orig(arg1);
+	NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
+	if(tempArray != nil && [tempArray count] != 0) {
 		if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0] isKindOfClass:%c(CSAdjunctItemView)]) {
 			if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0] isKindOfClass:%c(PLPlatterView)]) {
 				if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1] isKindOfClass:%c(PLPlatterCustomContentView)]) {
 					if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0] isKindOfClass:%c(CSMediaControlsView)]) {
 						if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0] isKindOfClass:%c(UIView)]) {
 							if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0] isKindOfClass:%c(MRUNowPlayingView)]) {
-								SPColorArtworkImage = [[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0].subviews[0].subviews[0].subviews[0] artworkImage];
+								averageArtworkColor = getAverageColor(SPColorArtworkImage);
+								invertColor = getInvertColor(averageArtworkColor);
+								RLog(@"TEXT");
+								((MRUNowPlayingView *) [[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.labelView.titleLabel.textColor = invertColor;
+								((MRUNowPlayingView *) [[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.labelView.subtitleLabel.textColor = invertColor;
+								((MRUNowPlayingView *) [[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.labelView.routeLabel.titleLabel.textColor = invertColor;
 							}
 						}
 					}
 				}
 			}
-			*/
-			/*RLog(@"Changed Color");
-			averageArtworkColor = getAverageColor(SPColorArtworkImage);
+		}
+	}
+}*/
 
-			CGRect replacementFrame = [[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[0].frame;
-
-			CAShapeLayer *replacementLayer = [[CAShapeLayer alloc] init];
-
-			replacementLayer.frame = replacementFrame;
-			replacementLayer.cornerRadius = 13;
-			replacementLayer.masksToBounds = true;
-			replacementLayer.backgroundColor = [averageArtworkColor CGColor];
-
-			UIView *replacementView = [[UIView alloc] initWithFrame:replacementFrame];
-
-			[replacementView.layer insertSublayer:replacementLayer atIndex:0];
-			[[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0] setBackgroundView:replacementView];
-
-		}*/
-
+/*-(void)viewWillAppear:(BOOL)arg1 {
+	//BOOL tempOrig = %orig;
+	if([self.adjunctListViewController.childViewControllers count] != 0) {
+		if([self.adjunctListViewController.childViewControllers[0].childViewControllers count] != 0) {
+			[self.adjunctListViewController.childViewControllers[0].childViewControllers[0].childViewControllers[0] NPColorUpdate];
+		}
+	}
+	NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
+	if(tempArray != nil && [tempArray count] != 0) {
+		if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0] isKindOfClass:%c(CSAdjunctItemView)]) {
+			if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0] isKindOfClass:%c(PLPlatterView)]) {
+				if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1] isKindOfClass:%c(PLPlatterCustomContentView)]) {
+					if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0] isKindOfClass:%c(CSMediaControlsView)]) {
+						if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0] isKindOfClass:%c(UIView)]) {
+							if([[[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0] isKindOfClass:%c(MRUNowPlayingView)]) {
+								((MRUNowPlayingView *) [[self.adjunctListViewController stackView].arrangedSubviews objectAtIndex:0].subviews[0].subviews[1].subviews[0].subviews[0].subviews[0]).controlsView.headerView.artworkView.iconView.hidden = YES;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	//return tempOrig;
-	//return %orig;
-//}
+	return %orig(arg1);
+}*/
 
 //%end
