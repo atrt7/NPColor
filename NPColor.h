@@ -2,6 +2,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
+#import <MediaRemote/MediaRemote.h>
 #import <QuartzCore/CABackdropLayer.h>
 
 @class MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView;
@@ -77,6 +78,7 @@
 -(BOOL)hasContent;
 -(void)_updateListViewContentInset;
 -(BOOL)isShowingMediaControls;
+-(void)NPColorUpdate;
 @end
 
 @interface SBFTouchPassThroughView : UIView

@@ -27,8 +27,14 @@ UIColor* getAverageColor(UIImage *image) {
 
 %hook MRUNowPlayingViewController
 
--(BOOL)isOnScreen {
-	BOOL tempOrig = %orig;
++(void)init {
+	MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_get_main_queue());
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(NPColorUpdate) name:(__bridge NSString*)kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
+	%orig;
+}
+
+%new
+-(void)NPColorUpdate {
 	//NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
 	//if(tempArray != nil && [tempArray count] != 0) {
 		/*
@@ -47,11 +53,8 @@ UIColor* getAverageColor(UIImage *image) {
 			*/
 		//}
 
-	if(((MRUNowPlayingView *) self.viewIfLoaded).controlsView.layout == 4) {
-		RLog(@"ArtworkImage");
-		SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
-	}
-	return tempOrig;
+	RLog(@"ArtworkImage");
+	SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
 }
 
 %end
@@ -60,7 +63,7 @@ UIColor* getAverageColor(UIImage *image) {
 
 -(void)_updateListViewContentInset {
 	//BOOL tempOrig = %orig;
-
+	[self NPColorUpdate];
 	NSArray *tempArray = [self.adjunctListViewController stackView].arrangedSubviews;
 	if(tempArray != nil && [tempArray count] != 0) {
 		/*
