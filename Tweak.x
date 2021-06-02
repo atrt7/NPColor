@@ -1,7 +1,7 @@
 #include "NPColor.h"
 #include <RemoteLog.h>
 
-//static BOOL NotifCenterChanged;
+//static int notifCenterChanged;
 //static BOOL enabled;
 static UIImage *SPColorArtworkImage;
 static UIColor *averageArtworkColor;
@@ -44,6 +44,14 @@ UIColor* getInvertColor(UIColor *color) {
     return nil;
 }
 
+CGFloat lightness(UIColor *color) {
+    CGFloat hue, saturation, brightness, alpha;
+    [color getHue:&hue saturation:&saturation brightness:&brightness alpha:&alpha];
+    CGFloat lightness = (2 - saturation) * brightness / 2;
+
+    return lightness;
+}
+
 
 %hook SBMediaController
 
@@ -53,6 +61,9 @@ UIColor* getInvertColor(UIColor *color) {
 		if (information && CFDictionaryContainsKey(information, kMRMediaRemoteNowPlayingInfoArtworkData)) {
 			SPColorArtworkImage = [UIImage imageWithData:(__bridge NSData*)CFDictionaryGetValue(information, kMRMediaRemoteNowPlayingInfoArtworkData)];
 			averageArtworkColor = getAverageColor(SPColorArtworkImage);
+			if(lightness(averageArtworkColor) >= .7) {
+				averageArtworkColor = [UIColor grayColor];
+			}
 			invertColor = getInvertColor(averageArtworkColor);
 		}
 	});
@@ -87,12 +98,23 @@ UIColor* getInvertColor(UIColor *color) {
 		if([self.viewIfLoaded.superview.superview.superview.superview isKindOfClass:%c(PLPlatterView)]) {
 			//SPColorArtworkImage = ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.artworkImage;
 
-			if([((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleMarqueeView.contentView.layer isKindOfClass:%c(CAReplicatorLayer)]) {
-				RLog(@"TEXT");
+			/*if([((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleMarqueeView.contentView.layer isKindOfClass:%c(CAReplicatorLayer)]) {
 				((CAReplicatorLayer *) ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.titleMarqueeView.contentView.layer).instanceColor = [invertColor CGColor];
 				((CAReplicatorLayer *) ((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.subtitleMarqueeView.contentView.layer).instanceColor = [invertColor CGColor];
-			}
+			}*/
+
+			//((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.labelView.routeLabel.textColor = invertColor;
+
 			((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.artworkView.iconShadowView.hidden = YES;
+
+			//CAReplicatorLayer *tempLayer = [[CAReplicatorLayer alloc] initWithLayer:((MRUNowPlayingView *) self.viewIfLoaded).controlsView.volumeControlsView.slider.subviews[0].layer.sublayers[0]];
+			//tempLayer.instanceColor = [invertColor CGColor];
+			//[((MRUNowPlayingView *) self.viewIfLoaded).controlsView.volumeControlsView.slider.subviews[0].layer insertSublayer:tempLayer atIndex:0];
+
+			//((MRUNowPlayingView *) self.viewIfLoaded).controlsView.volumeControlsView.slider.subviews[1].
+
+			//((MRUNowPlayingView *) self.viewIfLoaded).controlsView.headerView.routingButton.packageView
+			
 			
 			CGRect replacementFrame = self.viewIfLoaded.superview.superview.superview.superview.subviews[0].frame;
 
@@ -107,6 +129,7 @@ UIColor* getInvertColor(UIColor *color) {
 
 			[replacementView.layer insertSublayer:replacementLayer atIndex:0];
 			[[(CSNotificationAdjunctListViewController *)self.parentViewController.parentViewController.parentViewController stackView].arrangedSubviews[0].subviews[0] setBackgroundView:replacementView];
+
 		}
 
 	}
@@ -170,6 +193,7 @@ UIColor* getInvertColor(UIColor *color) {
 }*/
 
 %end
+
 
 /*%hook CSNotificationAdjunctListViewController
 

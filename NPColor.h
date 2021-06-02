@@ -7,7 +7,10 @@
 #import <SpringBoard/SBMediaController.h>
 #import <QuartzCore/CABackdropLayer.h>
 
-@class MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView, MRUNowPlayingLabelView, MRUNowPlayingRoutingButton, MPButton, MPRouteLabel, MPUMarqueeView, _MPUMarqueeContentView;
+@class MPVolumeSlider, MRUNowPlayingHeaderView, MRUNowPlayingControlsView, MRUNowPlayingView, MRUArtworkView, MRUNowPlayingView, MRUNowPlayingLabelView, MRUNowPlayingRoutingButton, MPButton, MPRouteLabel, MPUMarqueeView, _MPUMarqueeContentView, MPAVRoute, MTVisualStyling, MRUNowPlayingVolumeControlsView, MRUNowPlayingVolumeSlider, MRUVolumeSlider;
+
+@interface MPAVRoute : NSObject
+@end
 
 @protocol MTRecipeMaterialSettingsProviding
 @end
@@ -22,7 +25,11 @@
 @end
 
 @interface MPRouteLabel : UIView
+@property (nonatomic,retain) MPAVRoute * route;
 @property (nonatomic,readonly) UILabel * titleLabel;
+@property (nonatomic,retain) UIColor * textColor;
+@property (assign,setter=_setTextColorFollowsTintColor:,nonatomic) BOOL _textColorFollowsTintColor;
+-(void)_setTextColorFollowsTintColor:(BOOL)arg1;
 @end
 
 @interface MRUNowPlayingRoutingButton : MPButton
@@ -52,12 +59,30 @@
 @property (nonatomic,readonly) UIView * contentView;
 @end
 
+@interface MPVolumeSlider : UISlider
+@end
+
+@interface MRUVolumeSlider : MPVolumeSlider
+@end
+
+@interface MRUNowPlayingVolumeSlider : MRUVolumeSlider
+@end
+
+@interface MRUNowPlayingVolumeControlsView : UIView
+@property (nonatomic,readonly) MRUNowPlayingVolumeSlider * slider;
+//@property (nonatomic,readonly) MRUVolumeStepperView * stepper;
+@end
+
 @interface MRUNowPlayingLabelView : UIView
 @property (nonatomic,retain) UILabel * titleLabel;
 @property (nonatomic,retain) UILabel * subtitleLabel;
 @property (nonatomic,retain) MPRouteLabel * routeLabel;
 @property (nonatomic,retain) MPUMarqueeView * subtitleMarqueeView;
 @property (nonatomic,retain) MPUMarqueeView * titleMarqueeView;
+@end
+
+@interface MTVisualStyling : NSObject
+@property (nonatomic,copy,readonly) UIColor * color;
 @end
 
 @interface MRUNowPlayingHeaderView : UIControl
@@ -67,9 +92,19 @@
 -(MRUArtworkView *)artworkView;
 @end
 
+@interface MTVisualStylingProvider : NSObject
+@property (getter=_styleNamesToVisualStylings,nonatomic,retain) NSMutableDictionary * styleNamesToVisualStylings;
+@end
+
+@interface MRUVisualStylingProvider : NSObject
+@property (nonatomic,retain) MTVisualStylingProvider * visualStylingProvider;
+@end
+
 @interface MRUNowPlayingControlsView : UIView
 @property (assign,nonatomic) long long layout;
 @property (nonatomic,readonly) MRUNowPlayingHeaderView * headerView;
+@property (nonatomic,retain) MRUVisualStylingProvider * stylingProvider;
+@property (nonatomic,readonly) MRUNowPlayingVolumeControlsView * volumeControlsView;
 @end
 
 @interface MRUNowPlayingView : UIView
